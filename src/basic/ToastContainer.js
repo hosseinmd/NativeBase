@@ -1,13 +1,6 @@
 /* eslint-disable class-methods-use-this */
 import React, { Component } from 'react';
-import PropTypes from 'prop-types';
-import {
-  Keyboard,
-  Platform,
-  Animated,
-  ViewPropTypes,
-  PanResponder
-} from 'react-native';
+import { Keyboard, Platform, Animated, ViewPropTypes } from 'react-native';
 import { connectStyle } from 'native-base-shoutem-theme';
 
 import mapPropsToStyleNames from '../utils/mapPropsToStyleNames';
@@ -23,6 +16,9 @@ const POSITION = {
   TOP: 'top'
 };
 
+
+const useNativeDriver = Platform.OS !== "web";
+
 class ToastContainer extends Component {
   static show({ ...config }) {
     this.toastInstance._root.showToast({ config });
@@ -37,7 +33,6 @@ class ToastContainer extends Component {
 
     this.state = {
       fadeAnim: new Animated.Value(0),
-      pan: new Animated.ValueXY({ x: 0, y: 0 }),
       keyboardHeight: 0,
       isKeyboardVisible: false,
       modalVisible: false
@@ -45,17 +40,6 @@ class ToastContainer extends Component {
 
     this.keyboardDidHide = this.keyboardDidHide.bind(this);
     this.keyboardDidShow = this.keyboardDidShow.bind(this);
-    this._panResponder = PanResponder.create({
-      onMoveShouldSetPanResponderCapture: () => true,
-      onPanResponderRelease: (evt, { dx }) => {
-        if (dx !== 0) {
-          Animated.timing(this.state.pan, {
-            toValue: { x: dx, y: 0 },
-            duration: 100
-          }).start(() => this.closeToast('swipe'));
-        }
-      }
-    });
   }
 
   componentDidMount() {
@@ -145,7 +129,7 @@ class ToastContainer extends Component {
     Animated.timing(this.state.fadeAnim, {
       toValue: 1,
       duration: 200,
-      useNativeDriver: false
+      useNativeDriver,
     }).start();
   }
   closeModal(reason) {
@@ -162,26 +146,16 @@ class ToastContainer extends Component {
     Animated.timing(this.state.fadeAnim, {
       toValue: 0,
       duration: 200,
-      useNativeDriver: false
-    }).start(() => {
-      this.closeModal.bind(this, reason);
-      this.state.pan.setValue({ x: 0, y: 0 });
-    });
+      useNativeDriver,
+    }).start(this.closeModal.bind(this, reason));
   }
 
   render() {
     if (this.state.modalVisible) {
-      const { x, y } = this.state.pan;
       return (
-        <Animated.View
-          {...this._panResponder.panHandlers}
-          style={[
-            this.getToastStyle(),
-            { transform: [{ translateX: x }, { translateY: y }] }
-          ]}
-        >
+        <Animated.View style={this.getToastStyle()}>
           <Toast
-            style={[this.state.style]}
+            style={this.state.style}
             danger={this.state.type === 'danger'}
             success={this.state.type === 'success'}
             warning={this.state.type === 'warning'}
